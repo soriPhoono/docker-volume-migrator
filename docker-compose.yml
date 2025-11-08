@@ -1,0 +1,6 @@
+services:
+  migrator:
+    build: ./
+    volumes:
+      - ./test-input:/input
+      - ./test-output:/output
