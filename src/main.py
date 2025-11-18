@@ -1,6 +1,7 @@
 import os
 import asyncio
 import aiofiles
+import shutil
 
 
 async def copy_file(source_path, dest_path, chunk_size=65536):
@@ -15,14 +16,21 @@ async def copy_file(source_path, dest_path, chunk_size=65536):
     """
     print(f"Copying {source_path} to {dest_path}")
     try:
-        async with aiofiles.open(source_path, 'rb') as f_in:
-            async with aiofiles.open(dest_path, 'wb') as f_out:
-                while True:
-                    chunk = await f_in.read(chunk_size)
-                    if not chunk:
-                        break
-                    await f_out.write(chunk)
-        print(f"Finished copying {source_path} to {dest_path}")
+        if os.path.isfile(source_path):
+            async with aiofiles.open(source_path, 'rb') as f_in:
+                async with aiofiles.open(dest_path, 'wb') as f_out:
+                    while True:
+                        chunk = await f_in.read(chunk_size)
+                        if not chunk:
+                            break
+                        await f_out.write(chunk)
+            print(f"Finished copying file {source_path} to {dest_path}")
+        else:
+            for item in os.listdir(source_path):
+                await copy_file(
+                    os.path.join(source_path, item),
+                    os.path.join(dest_path, item)
+                )
         return True
     except FileNotFoundError:
         print(f"File not found: {source_path}")
@@ -34,19 +42,19 @@ async def copy_file(source_path, dest_path, chunk_size=65536):
 async def main():
     DIR = '/input'
 
-    tasks = []
-
     for name in os.listdir('/output'):
-        os.remove(os.path.join('/output', name))
-        print(f"Removed existing file: {name}")
+        if os.path.isdir(os.path.join('/output', name)):
+            shutil.rmtree(os.path.join('/output', name))
+            print(f"Removed existing directory: {name}")
+        else:
+            os.remove(os.path.join('/output', name))
+            print(f"Removed existing file: {name}")
 
     for name in os.listdir(DIR):
-        tasks.append(copy_file(
+        await copy_file(
             os.path.join(DIR, name),
             os.path.join('/output', name)
-        ))
-
-    await asyncio.gather(*tasks)
+        )
 
 
 if __name__ == "__main__":
